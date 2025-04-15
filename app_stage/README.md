@@ -1,16 +1,39 @@
 # app_stage
 
-A new Flutter project.
+## Description
 
-## Getting Started
+app_stage est une application Flutter permettant la gestion des missions de stage sous forme d’un rapport numérique interactif. Elle intègre l’authentification Firebase et la gestion des données en temps réel via Firestore.
 
-This project is a starting point for a Flutter application.
+## Fonctionnalités
 
-A few resources to get you started if this is your first Flutter project:
+- **Authentification Firebase** : Inscription, connexion et déconnexion sécurisées.
+- **Gestion des missions** : Ajout, modification et suppression des missions de stage.
+- **Stockage Cloud** : Sauvegarde des données avec **Cloud Firestore**.
+- **Interface utilisateur moderne** : Design optimisé avec **Google Fonts** et un thème adaptatif.
+- **Navigation fluide** : Intégration de **Provider** pour la gestion d’état.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Installation
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### Prérequis
+
+- **Flutter** installé ([Télécharger Flutter](https://docs.flutter.dev/get-started/install))
+- **Firebase** configuré ([Guide d’intégration](https://firebase.google.com/docs/flutter/setup))
+- Un éditeur comme **VS Code** ou **Android Studio**
+
+### Étapes d’installation
+
+1. **Cloner le projet** :
+   ```bash
+   git clone https://github.com/ben-sliman/TpFlutterBen.git
+
+2. **Accéder au dossier** :
+   ```bash
+   cd app_stage
+
+3. **Mettre à jour les dépendances** :
+   ```bash
+   flutter pub get
+   
+4. **Lancer l application** :
+   ```bash
+   flutter run
