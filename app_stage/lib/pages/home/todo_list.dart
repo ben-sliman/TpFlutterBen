@@ -7,11 +7,13 @@ import '../../../models/save_task.dart';
 import '../../../models/task_model.dart';
 import '../../services/auth_service.dart';
 
+// Widget principal qui gère l'affichage du rapport de stage.
 class TodoList extends StatelessWidget {
   const TodoList({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Contrôleurs pour récupérer les textes tapés par l'utilisateur.
     final presentationController = TextEditingController();
     final objectifsController = TextEditingController();
     final difficultiesController = TextEditingController();
@@ -21,6 +23,7 @@ class TodoList extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Rapport de Stage'),
         actions: [
+          // Bouton de déconnexion avec une boîte de confirmation.
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Déconnexion',
@@ -49,22 +52,31 @@ class TodoList extends StatelessWidget {
           ),
         ],
       ),
+
+      // Bouton flottant pour ajouter une nouvelle mission.
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.of(context).pushNamed('/add-todo-screen'),
         child: const Icon(Icons.add),
       ),
+
+      // Contenu principal de la page.
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Section présentation de l'entreprise.
               _buildSectionTitle("Présentation de l'entreprise"),
               _buildMultilineField(presentationController, 'Décrivez l’entreprise ici...'),
               const SizedBox(height: 20),
+
+              // Section objectifs du stage.
               _buildSectionTitle('Objectifs du stage'),
               _buildMultilineField(objectifsController, 'Quels étaient les objectifs de votre stage ?'),
               const SizedBox(height: 20),
+
+              // Section missions réalisées (données dynamiques Firestore).
               _buildSectionTitle('Missions réalisées'),
               const SizedBox(height: 10),
               FutureBuilder(
@@ -98,6 +110,7 @@ class TodoList extends StatelessWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
+                                    // Affiche le titre de la tâche.
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
@@ -114,11 +127,15 @@ class TodoList extends StatelessWidget {
                                       ],
                                     ),
                                     const SizedBox(height: 8),
+
+                                    // Affiche les détails de la tâche s'ils existent.
                                     if (task.date.isNotEmpty) Text(' Date : ${task.date}'),
                                     if (task.lieu.isNotEmpty) Text(' Lieu : ${task.lieu}'),
                                     if (task.activitesRealisees.isNotEmpty) Text(' Activités : ${task.activitesRealisees}'),
                                     if (task.competencesAcquises.isNotEmpty) Text(' Compétences : ${task.competencesAcquises}'),
                                     const SizedBox(height: 8),
+
+                                    // Boutons pour modifier ou supprimer la tâche.
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.end,
                                       children: [
@@ -144,15 +161,26 @@ class TodoList extends StatelessWidget {
                 },
               ),
               const SizedBox(height: 20),
+
+              // Section difficultés rencontrées.
               _buildSectionTitle('Difficultés rencontrées'),
               _buildMultilineField(difficultiesController, 'Quelles difficultés avez-vous rencontrées ?'),
               const SizedBox(height: 20),
+
+              // Section conclusion.
               _buildSectionTitle('Conclusion'),
               _buildMultilineField(conclusionController, 'Rédigez votre conclusion ici...'),
               const SizedBox(height: 20),
+
+              // Bouton pour générer le PDF final du rapport.
               ElevatedButton(
-                onPressed: () => _generatePDF(context, presentationController.text, objectifsController.text,
-                    difficultiesController.text, conclusionController.text),
+                onPressed: () => _generatePDF(
+                  context,
+                  presentationController.text,
+                  objectifsController.text,
+                  difficultiesController.text,
+                  conclusionController.text
+                ),
                 child: const Text('Convertir en PDF'),
               )
             ],
@@ -162,11 +190,13 @@ class TodoList extends StatelessWidget {
     );
   }
 
+  // Fonction pour afficher un titre de section.
   Widget _buildSectionTitle(String title) => Text(
         title,
         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
       );
 
+  // Fonction réutilisable pour les champs de texte multilignes.
   Widget _buildMultilineField(TextEditingController controller, String hint) => TextField(
         controller: controller,
         maxLines: null,
@@ -176,6 +206,7 @@ class TodoList extends StatelessWidget {
         ),
       );
 
+  // Fenêtre de modification d'une tâche existante.
   void _editTaskDialog(BuildContext context, Task task) {
     final titleController = TextEditingController(text: task.title);
     final dateController = TextEditingController(text: task.date);
@@ -193,11 +224,12 @@ class TodoList extends StatelessWidget {
             children: [
               _buildMultilineField(titleController, 'Titre'),
               const SizedBox(height: 10),
+              // Sélecteur de date.
               TextField(
                 controller: dateController,
                 decoration: const InputDecoration(labelText: 'Date', border: OutlineInputBorder()),
                 onTap: () async {
-                  FocusScope.of(context).requestFocus(FocusNode());
+                  FocusScope.of(context).requestFocus(FocusNode()); // Cache le clavier.
                   DateTime? pickedDate = await showDatePicker(
                     context: context,
                     initialDate: DateTime.now(),
@@ -219,6 +251,7 @@ class TodoList extends StatelessWidget {
             TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text("Annuler")),
             TextButton(
               onPressed: () async {
+                // Validation : tous les champs doivent être remplis.
                 if ([titleController, dateController, lieuController, activitesController, competencesController]
                     .every((controller) => controller.text.trim().isNotEmpty)) {
                   await context.read<SaveTask>().editTask(
@@ -244,6 +277,7 @@ class TodoList extends StatelessWidget {
     );
   }
 
+  // Fenêtre de confirmation avant suppression d'une tâche.
   void _confirmDelete(BuildContext context, Task task) {
     showDialog(
       context: context,
@@ -264,79 +298,81 @@ class TodoList extends StatelessWidget {
     );
   }
 
- Future<void> _generatePDF(BuildContext context, String presentation, String objectifs, String difficultes, String conclusion) async {
-  final pdf = pw.Document();
-  final tasks = context.read<SaveTask>().tasks;
+  // Génération du PDF contenant tout le rapport de stage.
+  Future<void> _generatePDF(BuildContext context, String presentation, String objectifs, String difficultes, String conclusion) async {
+    final pdf = pw.Document();
+    final tasks = context.read<SaveTask>().tasks;
 
-  pw.Widget sectionTitle(String title) => pw.Text(
-    title,
-    style: pw.TextStyle(
-      fontSize: 20,
-      fontWeight: pw.FontWeight.bold,
-      decoration: pw.TextDecoration.underline,
-    ),
-  );
+    pw.Widget sectionTitle(String title) => pw.Text(
+      title,
+      style: pw.TextStyle(
+        fontSize: 20,
+        fontWeight: pw.FontWeight.bold,
+        decoration: pw.TextDecoration.underline,
+      ),
+    );
 
-  pdf.addPage(
-    pw.MultiPage(
-      build: (pw.Context context) => [
-        pw.Header(
-          level: 0,
-          child: pw.Text(
-            'Rapport de Stage',
-            style: pw.TextStyle(
-              fontSize: 24,
-              fontWeight: pw.FontWeight.bold,
-              decoration: pw.TextDecoration.underline,
+    pdf.addPage(
+      pw.MultiPage(
+        build: (pw.Context context) => [
+          pw.Header(
+            level: 0,
+            child: pw.Text(
+              'Rapport de Stage',
+              style: pw.TextStyle(
+                fontSize: 24,
+                fontWeight: pw.FontWeight.bold,
+                decoration: pw.TextDecoration.underline,
+              ),
             ),
           ),
-        ),
-        sectionTitle("Présentation de l'entreprise"),
-        pw.SizedBox(height: 5),
-        pw.Paragraph(text: presentation),
+          sectionTitle("Présentation de l'entreprise"),
+          pw.SizedBox(height: 5),
+          pw.Paragraph(text: presentation),
 
-        pw.SizedBox(height: 15),
-        sectionTitle('Objectifs du stage'),
-        pw.SizedBox(height: 5),
-        pw.Paragraph(text: objectifs),
+          pw.SizedBox(height: 15),
+          sectionTitle('Objectifs du stage'),
+          pw.SizedBox(height: 5),
+          pw.Paragraph(text: objectifs),
 
-        pw.SizedBox(height: 15),
-        sectionTitle('Missions Réalisées'),
-        pw.SizedBox(height: 5),
-        if (tasks.isEmpty)
-          pw.Text('Aucune tâche pour le moment.')
-        else
-          pw.Column(
-            children: tasks.map((task) => pw.Container(
-              margin: const pw.EdgeInsets.symmetric(vertical: 5),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Text('• ${task.title}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                  if (task.date.isNotEmpty) pw.Text('Date : ${task.date}'),
-                  if (task.lieu.isNotEmpty) pw.Text('Lieu : ${task.lieu}'),
-                  if (task.activitesRealisees.isNotEmpty) pw.Text('Activités : ${task.activitesRealisees}'),
-                  if (task.competencesAcquises.isNotEmpty) pw.Text('Compétences : ${task.competencesAcquises}'),
-                ],
-              ),
-            )).toList(),
-          ),
+          pw.SizedBox(height: 15),
+          sectionTitle('Missions Réalisées'),
+          pw.SizedBox(height: 5),
+          if (tasks.isEmpty)
+            pw.Text('Aucune tâche pour le moment.')
+          else
+            pw.Column(
+              children: tasks.map((task) => pw.Container(
+                margin: const pw.EdgeInsets.symmetric(vertical: 5),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('-> ${task.title}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                    if (task.date.isNotEmpty) pw.Text('Date : ${task.date}'),
+                    if (task.lieu.isNotEmpty) pw.Text('Lieu : ${task.lieu}'),
+                    if (task.activitesRealisees.isNotEmpty) pw.Text('Activités : ${task.activitesRealisees}'),
+                    if (task.competencesAcquises.isNotEmpty) pw.Text('Compétences : ${task.competencesAcquises}'),
+                  ],
+                ),
+              )).toList(),
+            ),
 
-        pw.SizedBox(height: 15),
-        sectionTitle('Difficultés rencontrées'),
-        pw.SizedBox(height: 5),
-        pw.Paragraph(text: difficultes),
+          pw.SizedBox(height: 15),
+          sectionTitle('Difficultés rencontrées'),
+          pw.SizedBox(height: 5),
+          pw.Paragraph(text: difficultes),
 
-        pw.SizedBox(height: 15),
-        sectionTitle('Conclusion'),
-        pw.SizedBox(height: 5),
-        pw.Paragraph(text: conclusion),
-      ],
-    ),
-  );
+          pw.SizedBox(height: 15),
+          sectionTitle('Conclusion'),
+          pw.SizedBox(height: 5),
+          pw.Paragraph(text: conclusion),
+        ],
+      ),
+    );
 
-  await Printing.layoutPdf(
-    onLayout: (PdfPageFormat format) async => pdf.save(),
-  );
-}
+    // Affiche la prévisualisation du PDF.
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdf.save(),
+    );
+  }
 }

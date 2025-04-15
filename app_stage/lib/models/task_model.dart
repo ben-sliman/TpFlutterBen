@@ -1,29 +1,29 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Classe Task qui représente une mission dans l'application de liste de tâches.
+/// Classe `Task` qui représente une mission dans l'application de liste de tâches.
 class Task {
-  // Identifiant unique de la mission
+  /// Identifiant unique de la mission.
   final String id;
 
-  // Titre de la mission
+  /// Titre de la mission.
   final String title;
 
-  // État de la mission (complétée ou non)
+  /// État de la mission : complétée (true) ou non (false).
   bool isCompleted;
 
-  // Nouvelle propriété : Date de la mission
+  /// Date de la mission (stockée sous forme de chaîne de caractères).
   final String date;
 
-  // Nouvelle propriété : Lieu de la mission
+  /// Lieu où s'est déroulée la mission.
   final String lieu;
 
-  // Nouvelle propriété : Activités réalisées
+  /// Description des activités réalisées pendant la mission.
   final String activitesRealisees;
 
-  // Nouvelle propriété : Compétences acquises
+  /// Description des compétences acquises lors de la mission.
   final String competencesAcquises;
 
-  /// Constructeur de la classe Task avec les nouvelles propriétés.
+  /// Constructeur de la classe `Task` qui permet d'initialiser toutes les propriétés.
   Task({
     required this.id,
     required this.title,
@@ -34,7 +34,7 @@ class Task {
     required this.competencesAcquises,
   });
 
-  /// Méthode pour créer une instance de Task à partir d'un document Firestore.
+  /// Méthode qui permet de créer une instance `Task` à partir d'un document Firestore.
   factory Task.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return Task(
@@ -48,7 +48,8 @@ class Task {
     );
   }
 
-  /// Méthode pour convertir l'objet Task en format JSON.
+  /// Méthode qui convertit une instance `Task` en format JSON
+  /// pour pouvoir l'enregistrer dans Firestore.
   Map<String, dynamic> toJson() {
     return {
       'title': title,
