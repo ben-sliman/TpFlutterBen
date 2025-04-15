@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../models/save_task.dart';
-import '../../models/task_model.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import '../../../models/save_task.dart';
+import '../../../models/task_model.dart';
+import '../../services/auth_service.dart';
 
 class TodoList extends StatelessWidget {
   const TodoList({super.key});
@@ -16,6 +20,34 @@ class TodoList extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Rapport de Stage'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Déconnexion',
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text("Déconnexion"),
+                  content: const Text("Voulez-vous vous déconnecter ?"),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text("Annuler"),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text("Déconnexion"),
+                    ),
+                  ],
+                ),
+              );
+              if (confirm == true) {
+                await AuthService().signout(context: context);
+              }
+            },
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.of(context).pushNamed('/add-todo-screen'),
@@ -27,7 +59,7 @@ class TodoList extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionTitle('Présentation de l’entreprise'),
+              _buildSectionTitle("Présentation de l'entreprise"),
               _buildMultilineField(presentationController, 'Décrivez l’entreprise ici...'),
               const SizedBox(height: 20),
               _buildSectionTitle('Objectifs du stage'),
@@ -41,7 +73,12 @@ class TodoList extends StatelessWidget {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   } else if (snapshot.hasError) {
-                    return Center(child: Text("Erreur : ${snapshot.error}", style: const TextStyle(color: Colors.red)));
+                    return Center(
+                      child: Text(
+                        "Erreur : ${snapshot.error}",
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    );
                   } else {
                     return Consumer<SaveTask>(
                       builder: (context, taskProvider, _) {
@@ -74,11 +111,6 @@ class TodoList extends StatelessWidget {
                                             ),
                                           ),
                                         ),
-                                        Checkbox(
-                                          value: task.isCompleted,
-                                          activeColor: task.isCompleted ? Colors.red : Colors.blue,
-                                          onChanged: (_) => context.read<SaveTask>().toggleTaskCompletion(task),
-                                        )
                                       ],
                                     ),
                                     const SizedBox(height: 8),
@@ -119,23 +151,9 @@ class TodoList extends StatelessWidget {
               _buildMultilineField(conclusionController, 'Rédigez votre conclusion ici...'),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () {
-                  final isValid = [
-                    presentationController.text.trim(),
-                    objectifsController.text.trim(),
-                    difficultiesController.text.trim(),
-                    conclusionController.text.trim(),
-                  ].every((text) => text.isNotEmpty);
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        isValid ? 'Rapport sauvegardé avec succès !' : 'Veuillez remplir toutes les sections.',
-                      ),
-                    ),
-                  );
-                },
-                child: const Text('Sauvegarder le rapport'),
+                onPressed: () => _generatePDF(context, presentationController.text, objectifsController.text,
+                    difficultiesController.text, conclusionController.text),
+                child: const Text('Convertir en PDF'),
               )
             ],
           ),
@@ -160,32 +178,69 @@ class TodoList extends StatelessWidget {
 
   void _editTaskDialog(BuildContext context, Task task) {
     final titleController = TextEditingController(text: task.title);
+    final dateController = TextEditingController(text: task.date);
+    final lieuController = TextEditingController(text: task.lieu);
+    final activitesController = TextEditingController(text: task.activitesRealisees);
+    final competencesController = TextEditingController(text: task.competencesAcquises);
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Modifier la tâche"),
-        content: TextField(
-          controller: titleController,
-          decoration: const InputDecoration(labelText: 'Titre de la tâche', border: OutlineInputBorder()),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text("Annuler")),
-          TextButton(
-            onPressed: () async {
-              final newTitle = titleController.text.trim();
-              if (newTitle.isNotEmpty) {
-                await context.read<SaveTask>().editTask(task.id, newTitle);
-                Navigator.of(context).pop();
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Le titre ne peut pas être vide.")),
-                );
-              }
-            },
-            child: const Text("Modifier"),
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Modifier la mission"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildMultilineField(titleController, 'Titre'),
+              const SizedBox(height: 10),
+              TextField(
+                controller: dateController,
+                decoration: const InputDecoration(labelText: 'Date', border: OutlineInputBorder()),
+                onTap: () async {
+                  FocusScope.of(context).requestFocus(FocusNode());
+                  DateTime? pickedDate = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.now(),
+                    firstDate: DateTime(2025),
+                    lastDate: DateTime.now(),
+                  );
+                  if (pickedDate != null) {
+                    dateController.text = '${pickedDate.day}/${pickedDate.month}/${pickedDate.year}';
+                  }
+                },
+              ),
+              const SizedBox(height: 10),
+              _buildMultilineField(lieuController, 'Lieu'),
+              _buildMultilineField(activitesController, 'Activités réalisées'),
+              _buildMultilineField(competencesController, 'Compétences acquises'),
+            ],
           ),
-        ],
-      ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text("Annuler")),
+            TextButton(
+              onPressed: () async {
+                if ([titleController, dateController, lieuController, activitesController, competencesController]
+                    .every((controller) => controller.text.trim().isNotEmpty)) {
+                  await context.read<SaveTask>().editTask(
+                        task.id,
+                        titleController.text.trim(),
+                        dateController.text.trim(),
+                        lieuController.text.trim(),
+                        activitesController.text.trim(),
+                        competencesController.text.trim(),
+                      );
+                  Navigator.of(context).pop();
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Tous les champs doivent être remplis.")),
+                  );
+                }
+              },
+              child: const Text("Modifier"),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -208,4 +263,80 @@ class TodoList extends StatelessWidget {
       ),
     );
   }
+
+ Future<void> _generatePDF(BuildContext context, String presentation, String objectifs, String difficultes, String conclusion) async {
+  final pdf = pw.Document();
+  final tasks = context.read<SaveTask>().tasks;
+
+  pw.Widget sectionTitle(String title) => pw.Text(
+    title,
+    style: pw.TextStyle(
+      fontSize: 20,
+      fontWeight: pw.FontWeight.bold,
+      decoration: pw.TextDecoration.underline,
+    ),
+  );
+
+  pdf.addPage(
+    pw.MultiPage(
+      build: (pw.Context context) => [
+        pw.Header(
+          level: 0,
+          child: pw.Text(
+            'Rapport de Stage',
+            style: pw.TextStyle(
+              fontSize: 24,
+              fontWeight: pw.FontWeight.bold,
+              decoration: pw.TextDecoration.underline,
+            ),
+          ),
+        ),
+        sectionTitle("Présentation de l'entreprise"),
+        pw.SizedBox(height: 5),
+        pw.Paragraph(text: presentation),
+
+        pw.SizedBox(height: 15),
+        sectionTitle('Objectifs du stage'),
+        pw.SizedBox(height: 5),
+        pw.Paragraph(text: objectifs),
+
+        pw.SizedBox(height: 15),
+        sectionTitle('Missions Réalisées'),
+        pw.SizedBox(height: 5),
+        if (tasks.isEmpty)
+          pw.Text('Aucune tâche pour le moment.')
+        else
+          pw.Column(
+            children: tasks.map((task) => pw.Container(
+              margin: const pw.EdgeInsets.symmetric(vertical: 5),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text('• ${task.title}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                  if (task.date.isNotEmpty) pw.Text('Date : ${task.date}'),
+                  if (task.lieu.isNotEmpty) pw.Text('Lieu : ${task.lieu}'),
+                  if (task.activitesRealisees.isNotEmpty) pw.Text('Activités : ${task.activitesRealisees}'),
+                  if (task.competencesAcquises.isNotEmpty) pw.Text('Compétences : ${task.competencesAcquises}'),
+                ],
+              ),
+            )).toList(),
+          ),
+
+        pw.SizedBox(height: 15),
+        sectionTitle('Difficultés rencontrées'),
+        pw.SizedBox(height: 5),
+        pw.Paragraph(text: difficultes),
+
+        pw.SizedBox(height: 15),
+        sectionTitle('Conclusion'),
+        pw.SizedBox(height: 5),
+        pw.Paragraph(text: conclusion),
+      ],
+    ),
+  );
+
+  await Printing.layoutPdf(
+    onLayout: (PdfPageFormat format) async => pdf.save(),
+  );
+}
 }

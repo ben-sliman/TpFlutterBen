@@ -4,8 +4,8 @@ import 'package:app_stage/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:app_stage/models/save_task.dart';
 import 'package:app_stage/pages/login/login_page.dart';
-import 'package:app_stage/pages/add_todo.dart'; // Import de AddTodo
-import 'package:app_stage/pages/todo_list.dart'; // Import de TodoList
+import 'package:app_stage/pages/home/add_todo.dart'; // Import de AddTodo
+import 'package:app_stage/pages/home/todo_list.dart'; // Import de TodoList
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
